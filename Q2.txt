@@ -80,6 +80,99 @@ jobs:
 (Note: You can also call reusable workflows from a different repository using owner/repo/.github/workflows/file.yml@main)
 
 
+
+---------------------question about reusable workflows,how to know result of one flow---------------------
+jobs:
+  deploy-dev1:
+    uses: ./.github/workflows/deploy-template.yml
+    with:
+      environment: dev1
+
+  # This job ONLY runs if deploy-dev1 fails
+  notify-failure:
+    needs: deploy-dev1
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Deployment to dev1 failed!"
+	  
+2. Getting Data (Outputs) back from the Reusable Workflow
+If you want the reusable workflow to return data (e.g., an IP address, a deployment URL, or an artifact ID), you must map the outputs explicitly.
+
+Step A: Define the outputs in the Reusable Workflow
+In deploy-template.yml, you have to declare what you are passing back using outputs under workflow_call:
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+    # 1. Declare the output here
+    outputs:
+      deploy_url:
+        description: "The URL of the deployed app"
+        value: ${{ jobs.deploy.outputs.url }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # 2. Define the output at the job level
+    outputs:
+      url: ${{ steps.deploy-step.outputs.url }}
+    steps:
+      - name: Deploy and get URL
+        id: deploy-step
+        run: |
+          # Simulate deployment and get URL
+          echo "url=https://${{ inputs.environment }}.myapp.com" >> $GITHUB_OUTPUT
+
+Step B: Read the output in the Caller Workflow
+Now, in your main deploy.yml, you can access that output using needs.<caller_job_name>.outputs.<output_name>:
+
+yaml
+jobs:
+  deploy-dev1:
+    uses: ./.github/workflows/deploy-template.yml
+    with:
+      environment: dev1
+
+  print-url:
+    needs: deploy-dev1
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print the URL
+        # Notice it is 'needs.deploy-dev1', which is the name of the CALLER job.
+        run: echo "The app is live at ${{ needs.deploy-dev1.outputs.deploy_url }}"
+
+⚠️ A Very Common Trap: Secrets in if statements
+Because reusable workflows are encapsulated, you cannot use secrets or step outputs inside the if: condition of the caller job.
+
+For example, this will fail:
+
+yaml
+  deploy-dev1:
+    uses: ./.github/workflows/deploy-template.yml
+    if: ${{ secrets.MY_SECRET == 'true' }} # ❌ THIS WILL NOT WORK
+If you need complex logic to determine whether to run the reusable workflow, you must use an intermediate job:
+
+yaml
+jobs:
+  check-logic:
+    runs-on: ubuntu-latest
+    outputs:
+      should_deploy: ${{ steps.check.outputs.result }}
+    steps:
+      - id: check
+        run: echo "result=true" >> $GITHUB_OUTPUT
+
+  deploy-dev1:
+    needs: check-logic
+    if: needs.check-logic.outputs.should_deploy == 'true' # ✅ Works perfectly
+    uses: ./.github/workflows/deploy-template.yml
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------
+
 Part 2: Passing an Object or List of Values
 The short answer: GitHub Actions does not natively support type: array or type: object in workflow inputs. You can only use string, number, or boolean.
 
