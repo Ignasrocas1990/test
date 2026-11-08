@@ -32,7 +32,7 @@ jobs:
 
   # 4. Deploy ITest1 (Visual Box 4 - Manual Approval)
   deploy-itest1:
-    needs: deploy-dev1
+    needs: [build, deploy-dev1]
     runs-on: ubuntu-latest
     environment: itest1 # Define this with Required Reviewers in repo settings
     steps:
@@ -43,7 +43,7 @@ jobs:
 
   # 5. Deploy UAT (Visual Box 5 - Manual Approval)
   deploy-uat:
-    needs: deploy-itest1
+    needs: [build, deploy-itest1]
     runs-on: ubuntu-latest
     environment: uat # Define this with Required Reviewers
     steps:
