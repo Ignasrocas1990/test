@@ -28,7 +28,6 @@ jobs:
 
   # 2. Deploy ITest1 (Manual Approval)
   deploy-itest1:
-    needs: [deploy-dev1]
     runs-on: ubuntu-latest
     environment: itest1 
     steps:
@@ -39,7 +38,6 @@ jobs:
 
   # 3. Deploy UAT (Manual Approval)
   deploy-uat:
-    needs: [deploy-itest1]
     runs-on: ubuntu-latest
     environment: uat 
     steps:
