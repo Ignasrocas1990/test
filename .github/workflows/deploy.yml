@@ -1,0 +1,49 @@
+name: Full Pipeline - Deploy
+
+on:
+  workflow_dispatch: 
+    inputs:
+      build_number:
+        description: 'Enter the Build Number to deploy (e.g., 42)'
+        required: true
+        type: string
+  workflow_run:
+    workflows: ["Main Build"]
+    types: [completed]
+    branches: [main]
+
+jobs:
+
+  # 1. Deploy Dev1 (Automatic)
+  deploy-dev1:
+    runs-on: ubuntu-latest
+    environment: dev1
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Annotate build number
+        # Logic: Use manual input if it exists. Otherwise, use the build's run number.
+        run: |
+          BUILD_NUM="${{ inputs.build_number || github.event.workflow_run.run_number }}"
+          echo "::notice title=Build Number::Deploying build $BUILD_NUM to dev1"
+
+  # 2. Deploy ITest1 (Manual Approval)
+  deploy-itest1:
+    needs: [deploy-dev1]
+    runs-on: ubuntu-latest
+    environment: itest1 
+    steps:
+      - name: Annotate build number
+        run: |
+          BUILD_NUM="${{ inputs.build_number || github.event.workflow_run.run_number }}"
+          echo "::notice title=Build Number::Deploying build $BUILD_NUM to itest1"
+
+  # 3. Deploy UAT (Manual Approval)
+  deploy-uat:
+    needs: [deploy-itest1]
+    runs-on: ubuntu-latest
+    environment: uat 
+    steps:
+      - name: Annotate build number
+        run: |
+          BUILD_NUM="${{ inputs.build_number || github.event.workflow_run.run_number }}"
+          echo "::notice title=Build Number::Deploying build $BUILD_NUM to uat"
