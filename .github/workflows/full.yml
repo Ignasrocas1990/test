@@ -25,6 +25,8 @@ jobs:
     runs-on: ubuntu-latest
     environment: dev1 # Define this in repo settings (no reviewers = automatic)
     steps:
+      - name: Annotate build number
+        run: echo "::notice title=Build Number::Deploying build ${{ needs.build.outputs.build_number }} to dev1"
       - run: |
           echo "Deploying to dev1 with build: ${{ needs.build.outputs.build_number }}"
 
@@ -34,6 +36,8 @@ jobs:
     runs-on: ubuntu-latest
     environment: itest1 # Define this with Required Reviewers in repo settings
     steps:
+      - name: Annotate build number
+        run: echo "::notice title=Build Number::Deploying build ${{ needs.build.outputs.build_number }} to itest1"
       - run: |
           echo "Deploying to itest1 with build: ${{ needs.build.outputs.build_number }}"
 
@@ -43,5 +47,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: uat # Define this with Required Reviewers
     steps:
+      - name: Annotate build number
+        run: echo "::notice title=Build Number::Deploying build ${{ needs.build.outputs.build_number }} to uat"
       - run: |
           echo "Deploying to uat with build: ${{ needs.build.outputs.build_number }}"
