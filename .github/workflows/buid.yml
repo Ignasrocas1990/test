@@ -1,4 +1,4 @@
-name: Main Build & JFrog Push
+name: Main Build
 on:
   push:
     branches: [ main ]
@@ -20,15 +20,15 @@ jobs:
           # your build commands
           echo "Building with build number ${{ steps.build.outputs.build_number }}"
 
-      - name: Setup JFrog CLI
-        uses: jfrog/setup-jfrog-cli@v4
-        env:
-          JF_URL: ${{ secrets.JF_URL }}
-          JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
+#      - name: Setup JFrog CLI
+#        uses: jfrog/setup-jfrog-cli@v4
+#        env:
+#          JF_URL: ${{ secrets.JF_URL }}
+#          JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
 
-      - name: Upload Artifact to JFrog
-        run: |
-          jf rt upload "dist/*.zip" my-repo/ \
-            --build-name=my-app \
-            --build-number=${{ steps.build.outputs.build_number }}
-          jf rt build-publish my-app ${{ steps.build.outputs.build_number }}
+#      - name: Upload Artifact to JFrog
+#        run: |
+#          jf rt upload "dist/*.zip" my-repo/ \
+#            --build-name=my-app \
+#            --build-number=${{ steps.build.outputs.build_number }}
+#          jf rt build-publish my-app ${{ steps.build.outputs.build_number }}
