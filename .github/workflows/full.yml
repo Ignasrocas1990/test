@@ -45,12 +45,3 @@ jobs:
     steps:
       - run: |
           echo "Deploying to uat with build: ${{ needs.build.outputs.build_number }}"
-
-  # 6. Deploy Prod (Visual Box 6 - Manual Approval)
-  deploy-prod:
-    needs: deploy-uat
-    runs-on: ubuntu-latest
-    environment: prod # Define this with Required Reviewers
-    steps:
-      - run: |
-          echo "Deploying to prod with build: ${{ needs.build.outputs.build_number }}"
