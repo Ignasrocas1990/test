@@ -1,0 +1,56 @@
+name: Full Pipeline - Build & Deploy
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: # Allows manual triggering from the UI
+
+jobs:
+
+  # 1. Build & JFrog Push (Visual Box 2)
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      build_number: ${{ steps.build.outputs.build_number }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate Build Number
+        id: build
+        run: echo "build_number=${{ github.run_number }}" >> $GITHUB_OUTPUT
+      # ... Your JFrog upload steps here using ${{ steps.build.outputs.build_number }} ...
+
+  # 3. Deploy Dev1 (VirtualBox 3 - Automatic)
+  deploy-dev1:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: dev1 # Define this in repo settings (no reviewers = automatic)
+    steps:
+      - run: |
+          echo "Deploying to dev1 with build: ${{ needs.build.outputs.build_number }}"
+
+  # 4. Deploy ITest1 (Visual Box 4 - Manual Approval)
+  deploy-itest1:
+    needs: deploy-dev1
+    runs-on: ubuntu-latest
+    environment: itest1 # Define this with Required Reviewers in repo settings
+    steps:
+      - run: |
+          echo "Deploying to itest1 with build: ${{ needs.build.outputs.build_number }}"
+
+  # 5. Deploy UAT (Visual Box 5 - Manual Approval)
+  deploy-uat:
+    needs: deploy-itest1
+    runs-on: ubuntu-latest
+    environment: uat # Define this with Required Reviewers
+    steps:
+      - run: |
+          echo "Deploying to uat with build: ${{ needs.build.outputs.build_number }}"
+
+  # 6. Deploy Prod (Visual Box 6 - Manual Approval)
+  deploy-prod:
+    needs: deploy-uat
+    runs-on: ubuntu-latest
+    environment: prod # Define this with Required Reviewers
+    steps:
+      - run: |
+          echo "Deploying to prod with build: ${{ needs.build.outputs.build_number }}"
