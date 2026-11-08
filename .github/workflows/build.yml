@@ -17,10 +17,12 @@ jobs:
         id: build
         run: echo "build_number=${{ github.run_number }}" >> $GITHUB_OUTPUT
 
-      - name: Setup & Build
+      - name: show build number
         run: |
           # your build commands
-          echo "Building with build number ${{ steps.build.outputs.build_number }}"
+          echo "::notice title=Build Number::Deploying build $BUILD_NUM to dev1"
+
+
 
 #      - name: Setup JFrog CLI
 #        uses: jfrog/setup-jfrog-cli@v4
