@@ -20,7 +20,7 @@ jobs:
       - name: show build number
         run: |
           # your build commands
-          echo "::notice title=Build Number::Deploying build $BUILD_NUM to dev1"
+          echo "::notice title=Build Number::Deploying build ${{ github.run_number }} to dev1"
 
 
 
