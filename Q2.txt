@@ -1,0 +1,150 @@
+if i want to use Reusable Workflows
+how to do that>?
+Another question is is there way to pass in an object with list of values in it?
+
+Part 1: How to use Reusable Workflows
+A Reusable Workflow is basically a "function" for GitHub Actions. You put the workflow in one file, and "call" it from another file.
+
+Rule #1: You call a reusable workflow at the Job level (using uses:), not the step level.
+Rule #2: The reusable workflow must have a trigger called workflow_call.
+
+1. The Reusable Workflow (deploy-template.yml)
+Create a new file in .github/workflows/deploy-template.yml. It looks exactly like a normal workflow, but it uses workflow_call and defines inputs.
+
+
+
+name: Reusable Deploy
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+      build_number:
+        required: true
+        type: string
+    secrets:
+      DEPLOY_TOKEN:
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }} # Dynamically uses dev1, itest1, etc.
+    steps:
+      - name: Deploy
+        run: |
+          echo "Deploying build ${{ inputs.build_number }} to ${{ inputs.environment }}"
+          echo "Using secret: ${{ secrets.DEPLOY_TOKEN }}"
+		  
+		  
+
+2. The Caller Workflow (main.yml)
+Now, in your main deployment pipeline, you call this file using the ./ syntax (for local files).
+
+
+
+name: Main Pipeline
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy-dev1:
+    uses: ./.github/workflows/deploy-template.yml
+    with:
+      environment: dev1
+      build_number: "123"
+    secrets:
+      DEPLOY_TOKEN: ${{ secrets.DEV1_TOKEN }}
+
+  deploy-itest1:
+    needs: deploy-dev1
+    uses: ./.github/workflows/deploy-template.yml
+    with:
+      environment: itest1
+      build_number: "123"
+    secrets: inherit # This passes ALL secrets from the caller to the called workflow!
+
+  deploy-uat:
+    needs: deploy-itest1
+    uses: ./.github/workflows/deploy-template.yml
+    with:
+      environment: uat
+      build_number: "123"
+    secrets: inherit
+
+
+(Note: You can also call reusable workflows from a different repository using owner/repo/.github/workflows/file.yml@main)
+
+
+Part 2: Passing an Object or List of Values
+The short answer: GitHub Actions does not natively support type: array or type: object in workflow inputs. You can only use string, number, or boolean.
+
+The workaround: You pass your list/object as a JSON string, and then use the fromJSON() function to parse it in the receiving workflow.
+
+How to pass an array (list of values)
+Let's say you want to pass a list of servers to deploy to.
+
+In the Caller:
+
+yaml
+jobs:
+  deploy:
+    uses: ./.github/workflows/deploy-template.yml
+    with:
+      # You must format this as a valid JSON string
+      servers: '["us-east-1", "eu-west-1", "ap-south-1"]'
+In the Reusable Workflow (deploy-template.yml):
+
+yaml
+on:
+  workflow_call:
+    inputs:
+      servers:
+        required: true
+        type: string # It comes in as a string
+
+jobs:
+  # METHOD A: Use it in a Matrix (Parallel)
+  deploy-parallel:
+    strategy:
+      matrix:
+        server: ${{ fromJSON(inputs.servers) }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Deploying to ${{ matrix.server }}"
+
+  # METHOD B: Use it in a bash loop (Sequential)
+  deploy-sequential:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Loop through servers
+        env:
+          SERVER_LIST: ${{ inputs.servers }}
+        run: |
+          # Use jq to read the JSON array and loop over it
+          echo $SERVER_LIST | jq -r '.[]' | while read server; do
+            echo "Deploying to $server"
+          done
+How to pass an object (Key/Value pairs)
+You can do the exact same thing with an object!
+
+In the Caller:
+
+yaml
+    with:
+      config: '{"app1": "v2.0.1", "app2": "v1.5.0"}'
+In the Reusable Workflow:
+You can extract specific values using dot notation:
+
+yaml
+      - name: Deploy App 1
+        run: echo "Deploying version ${{ fromJSON(inputs.config).app1 }}"
+Why do this? (The Benefits)
+By moving your deployment steps into deploy-template.yml, you drastically shrink your main pipeline file.
+
+Instead of copying and pasting 30 lines of deployment code for dev1, itest1, uat, and prod, you just write those 30 lines once in the template. 
+If you need to add a new step (like sending a Slack message after deployment), you only add it in one place, and all 4 environments get it automatically.
